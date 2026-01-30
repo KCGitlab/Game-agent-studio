@@ -20,7 +20,7 @@ if "GEMINI_API_KEY" not in st.secrets:
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 model = genai.GenerativeModel(
-    model_name="gemini-pro",
+    model_name="models/gemini-1.0-pro",
     generation_config={
         "temperature": 0.8,
         "max_output_tokens": 2048

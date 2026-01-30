@@ -1,8 +1,10 @@
 import streamlit as st
-import google.generativeai as genai
+from openai import OpenAI, RateLimitError, OpenAIError
 from datetime import datetime
 import os
+import time
 
+# ------------------ CACHE RESET ------------------
 st.cache_resource.clear()
 
 # ------------------ PAGE CONFIG ------------------
@@ -12,20 +14,17 @@ st.set_page_config(
     layout="wide"
 )
 
+# ------------------ RATE LIMIT CONFIG ------------------
+MIN_SECONDS_BETWEEN_CALLS = 25  # affordable & safe
+if "last_api_call" not in st.session_state:
+    st.session_state.last_api_call = 0
+
 # ------------------ API KEY CHECK ------------------
-if "GEMINI_API_KEY" not in st.secrets:
-    st.error("❌ GEMINI_API_KEY not found in Streamlit Secrets.")
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("❌ OPENAI_API_KEY not found in Streamlit Secrets.")
     st.stop()
 
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
-model = genai.GenerativeModel(
-    model_name="models/gemini-1.0-pro",
-    generation_config={
-        "temperature": 0.8,
-        "max_output_tokens": 2048
-    }
-)
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # ------------------ UI HEADER ------------------
 st.title("🎮 GameMaster AI – The Ultimate Gaming Agent")
@@ -152,10 +151,25 @@ User Input:
 {user_input}
 """
 
-# ------------------ GEMINI CALL ------------------
+# ------------------ OPENAI CALL (SAFE) ------------------
 def generate_response(prompt):
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a professional game development AI agent."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=700
+        )
+        return response.choices[0].message.content
+
+    except RateLimitError:
+        return "⚠️ Rate limit reached. Please wait a minute and try again."
+
+    except OpenAIError as e:
+        return f"❌ OpenAI API error: {str(e)}"
 
 # ------------------ FILE SAVE ------------------
 def save_output(feature, content, language):
@@ -168,22 +182,34 @@ def save_output(feature, content, language):
 
 # ------------------ OUTPUT ------------------
 if generate:
+    now = time.time()
+    elapsed = now - st.session_state.last_api_call
+
+    if elapsed < MIN_SECONDS_BETWEEN_CALLS:
+        st.warning(
+            f"⏳ Please wait {int(MIN_SECONDS_BETWEEN_CALLS - elapsed)} seconds before generating again."
+        )
+        st.stop()
+
     if not user_prompt.strip():
         st.warning("⚠️ Please enter a prompt.")
-    else:
-        with st.spinner("GameMaster AI is working... 🎮"):
-            final_prompt = build_prompt(feature, user_prompt, language)
-            output = generate_response(final_prompt)
+        st.stop()
 
-        file_path = save_output(feature, output, language)
+    st.session_state.last_api_call = now
 
-        st.subheader(f"🧠 Agent Output ({language})")
-        st.markdown(output)
+    with st.spinner("GameMaster AI is working... 🎮"):
+        final_prompt = build_prompt(feature, user_prompt, language)
+        output = generate_response(final_prompt)
 
-        with open(file_path, "rb") as file:
-            st.download_button(
-                label="⬇️ Download Agent Output",
-                data=file,
-                file_name=os.path.basename(file_path),
-                mime="text/plain"
-            )
+    file_path = save_output(feature, output, language)
+
+    st.subheader(f"🧠 Agent Output ({language})")
+    st.markdown(output)
+
+    with open(file_path, "rb") as file:
+        st.download_button(
+            label="⬇️ Download Agent Output",
+            data=file,
+            file_name=os.path.basename(file_path),
+            mime="text/plain"
+        )

@@ -152,8 +152,27 @@ User Input:
 """
 
 # ------------------ OPENAI CALL (SAFE) ------------------
-if "message" in response.choices[0] and "content" in response.choices[0]["message"]:
-    return response.choices[0]["message"]["content"]
+def generate_response(prompt):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-5-nano",
+            messages=[
+                {"role": "system", "content": "You are a professional game development AI agent."},
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=800
+        )
+
+        # Correct extraction from GPT-5 response
+        content = response.choices[0].get("message", {}).get("content")
+        if content:
+            return content
+
+        return "⚠️ Model returned no visible text output."
+
+    except Exception as e:
+        return f"❌ OpenAI API error: {e}"
+
 
 
 # ------------------ FILE SAVE ------------------

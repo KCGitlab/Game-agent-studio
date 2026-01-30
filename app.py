@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # ------------------ RATE LIMIT CONFIG ------------------
-MIN_SECONDS_BETWEEN_CALLS = 25  # affordable & safe
+MIN_SECONDS_BETWEEN_CALLS = 20  # safe limit
 if "last_api_call" not in st.session_state:
     st.session_state.last_api_call = 0
 
@@ -27,16 +27,14 @@ if "OPENAI_API_KEY" not in st.secrets:
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # ------------------ UI HEADER ------------------
-st.title("🎮 GameMaster AI – The Ultimate Gaming Agent")
-st.markdown(
-    """
-Your **AI Game Studio Partner**  
-Concepts • Levels • NPC Logic • Strategy • Story • Avatars • Animations
-"""
-)
+st.title("🎮 GameMaster AI – Your AI Game Studio Partner")
+st.markdown("""
+Welcome! Generate **game concepts, levels, NPC logic, strategies, stories, avatars, and animations**  
+all powered by GPT-5 AI.
+""")
 
-# ------------------ SIDEBAR ------------------
-feature = st.sidebar.radio(
+# ------------------ SIDEBAR OPTIONS ------------------
+feature = st.sidebar.selectbox(
     "Select Agent Capability",
     [
         "Game Concept Generator",
@@ -44,52 +42,37 @@ feature = st.sidebar.radio(
         "NPC Behavior Designer",
         "Game Strategy Assistant",
         "Dialogue & Story Scripting",
-        "Avatar Creation for Games",
-        "Game Animation Creation"
+        "Avatar & Character Creation",
+        "Game Animation Designer"
     ]
 )
 
 language = st.sidebar.selectbox(
-    "Select Output Language",
+    "Output Language",
     [
-        "English",
-        "Hindi",
-        "Marathi",
-        "Tamil",
-        "Telugu",
-        "Kannada",
-        "Malayalam",
-        "Bengali",
-        "Gujarati",
-        "Punjabi",
-        "Spanish",
-        "French",
-        "German",
-        "Japanese",
-        "Korean",
-        "Chinese"
+        "English", "Hindi", "Marathi", "Tamil", "Telugu", "Kannada",
+        "Malayalam", "Bengali", "Gujarati", "Punjabi", "Spanish",
+        "French", "German", "Japanese", "Korean", "Chinese"
     ]
 )
 
 user_prompt = st.text_area(
-    "Enter your idea / requirement:",
+    "Enter your idea or requirement:",
     height=160,
-    placeholder="Example: A cyberpunk RPG boss character with emotional AI..."
+    placeholder="Example: Create a sci-fi RPG villain with AI-driven decision-making..."
 )
 
-generate = st.button("🚀 Generate Agent Output")
+generate = st.button("🚀 Generate Output")
 
 # ------------------ PROMPT ENGINE ------------------
 def build_prompt(feature, user_input, language):
     base = f"""
-You are GameMaster AI, an expert game designer and game AI architect.
-Generate the output strictly in {language} language.
-Ensure clarity, structure, and professional game development terminology.
+You are GameMaster AI, a professional game designer and AI assistant.  
+Respond strictly in {language}. Ensure clarity, professional terminology, and structure.
 """
-
     prompts = {
         "Game Concept Generator": """
-Create a complete game concept including:
+Generate a full game concept including:
 - Genre
 - Core gameplay loop
 - Story theme
@@ -104,54 +87,44 @@ Design a detailed game level including:
 - Rewards & progression
 """,
         "NPC Behavior Designer": """
-Create NPC behavior logic including:
-- NPC role
+Create NPC behavior including:
+- Role
 - Decision rules
 - Emotional states
 - Behavior tree (pseudo-code)
 """,
         "Game Strategy Assistant": """
-Analyze and improve gameplay strategy including:
+Analyze and improve gameplay strategy:
 - Balance fixes
 - Player engagement
 - Difficulty tuning
 - Retention mechanics
 """,
         "Dialogue & Story Scripting": """
-Write immersive game narrative including:
+Write immersive narrative:
 - Characters
 - Quests
-- Branching dialogue
+- Branching dialogues
 - Story arcs
 """,
-        "Avatar Creation for Games": """
-Design a game-ready avatar including:
+        "Avatar & Character Creation": """
+Design game avatar:
 - Visual appearance
-- Personality traits
+- Personality
 - Outfit & accessories
-- Animation style
-- Game engine notes (Unity / Unreal)
+- Animation notes
 """,
-        "Game Animation Creation": """
-Create animation design including:
-- Animation type (idle, walk, combat, emote)
-- Keyframes description
-- Timing & transitions
-- Engine-ready animation logic
+        "Game Animation Designer": """
+Design animations:
+- Type (idle, walk, combat, emote)
+- Keyframes & transitions
+- Engine-ready animation notes
 """
     }
 
-    return f"""
-{base}
+    return f"{base}\nTask:\n{prompts[feature]}\nUser Input:\n{user_input}"
 
-Task:
-{prompts[feature]}
-
-User Input:
-{user_input}
-"""
-
-# ------------------ OPENAI CALL (SAFE) ------------------
+# ------------------ OPENAI GPT-5 CALL ------------------
 def generate_response(prompt):
     try:
         response = client.chat.completions.create(
@@ -160,22 +133,18 @@ def generate_response(prompt):
                 {"role": "system", "content": "You are a professional game development AI agent."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=800
+            max_completion_tokens=1200
         )
-
-        # Correct extraction from GPT-5 response
-        content = response.choices[0].get("message", {}).get("content")
+        # ✅ Correct GPT-5 content extraction
+        content = response.choices[0].message["content"]
         if content:
             return content
-
         return "⚠️ Model returned no visible text output."
 
     except Exception as e:
         return f"❌ OpenAI API error: {e}"
 
-
-
-# ------------------ FILE SAVE ------------------
+# ------------------ SAVE OUTPUT ------------------
 def save_output(feature, content, language):
     os.makedirs("outputs", exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -184,15 +153,13 @@ def save_output(feature, content, language):
         f.write(content)
     return filename
 
-# ------------------ OUTPUT ------------------
+# ------------------ STREAMLIT OUTPUT ------------------
 if generate:
     now = time.time()
     elapsed = now - st.session_state.last_api_call
 
     if elapsed < MIN_SECONDS_BETWEEN_CALLS:
-        st.warning(
-            f"⏳ Please wait {int(MIN_SECONDS_BETWEEN_CALLS - elapsed)} seconds before generating again."
-        )
+        st.warning(f"⏳ Please wait {int(MIN_SECONDS_BETWEEN_CALLS - elapsed)} seconds before generating again.")
         st.stop()
 
     if not user_prompt.strip():
@@ -201,7 +168,7 @@ if generate:
 
     st.session_state.last_api_call = now
 
-    with st.spinner("GameMaster AI is working... 🎮"):
+    with st.spinner("🎮 GameMaster AI is generating..."):
         final_prompt = build_prompt(feature, user_prompt, language)
         output = generate_response(final_prompt)
 
@@ -212,7 +179,7 @@ if generate:
 
     with open(file_path, "rb") as file:
         st.download_button(
-            label="⬇️ Download Agent Output",
+            label="⬇️ Download Output",
             data=file,
             file_name=os.path.basename(file_path),
             mime="text/plain"

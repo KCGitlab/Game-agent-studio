@@ -155,7 +155,7 @@ User Input:
 def generate_response(prompt):
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-nano",
             messages=[
                 {"role": "system", "content": "You are a professional game development AI agent."},
                 {"role": "user", "content": prompt}

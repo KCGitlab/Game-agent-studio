@@ -160,16 +160,22 @@ def generate_response(prompt):
                 {"role": "system", "content": "You are a professional game development AI agent."},
                 {"role": "user", "content": prompt}
             ],
-            #temperature=0.7,
             max_completion_tokens=800
         )
-        return response.choices[0].message.content
 
-    except RateLimitError:
-        return "⚠️ Rate limit reached. Please wait a minute and try again."
+        # ✅ GPT-5 safe extraction
+        if hasattr(response.choices[0].message, "content") and response.choices[0].message.content:
+            return response.choices[0].message.content
 
-    except OpenAIError as e:
-        return f"❌ OpenAI API error: {str(e)}"
+        # ✅ Fallback (some SDK versions)
+        if hasattr(response.choices[0].message, "text"):
+            return response.choices[0].message.text
+
+        return "⚠️ Model returned no visible text output."
+
+    except Exception as e:
+        return f"❌ OpenAI API error: {e}"
+
 
 # ------------------ FILE SAVE ------------------
 def save_output(feature, content, language):

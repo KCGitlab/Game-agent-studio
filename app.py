@@ -1,8 +1,10 @@
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
 from datetime import datetime
 import os
+
 st.cache_resource.clear()
+
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(
     page_title="GameMaster AI 🎮",
@@ -11,11 +13,19 @@ st.set_page_config(
 )
 
 # ------------------ API KEY CHECK ------------------
-if "OPENAI_API_KEY" not in st.secrets:
-    st.error("❌ OPENAI_API_KEY not found in Streamlit Secrets.")
+if "GEMINI_API_KEY" not in st.secrets:
+    st.error("❌ GEMINI_API_KEY not found in Streamlit Secrets.")
     st.stop()
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config={
+        "temperature": 0.8,
+        "max_output_tokens": 2048
+    }
+)
 
 # ------------------ UI HEADER ------------------
 st.title("🎮 GameMaster AI – The Ultimate Gaming Agent")
@@ -40,7 +50,6 @@ feature = st.sidebar.radio(
     ]
 )
 
-# 🔹 Multilingual Support (ADDED)
 language = st.sidebar.selectbox(
     "Select Output Language",
     [
@@ -75,7 +84,7 @@ generate = st.button("🚀 Generate Agent Output")
 def build_prompt(feature, user_input, language):
     base = f"""
 You are GameMaster AI, an expert game designer and game AI architect.
-Generate the output strictly in **{language} language**.
+Generate the output strictly in {language} language.
 Ensure clarity, structure, and professional game development terminology.
 """
 
@@ -143,17 +152,10 @@ User Input:
 {user_input}
 """
 
-# ------------------ OPENAI CALL ------------------
+# ------------------ GEMINI CALL ------------------
 def generate_response(prompt):
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a professional game development AI agent."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.8
-    )
-    return response.choices[0].message.content
+    response = model.generate_content(prompt)
+    return response.text
 
 # ------------------ FILE SAVE ------------------
 def save_output(feature, content, language):
@@ -173,13 +175,11 @@ if generate:
             final_prompt = build_prompt(feature, user_prompt, language)
             output = generate_response(final_prompt)
 
-        # Save file automatically
         file_path = save_output(feature, output, language)
 
         st.subheader(f"🧠 Agent Output ({language})")
         st.markdown(output)
 
-        # Auto-ready download
         with open(file_path, "rb") as file:
             st.download_button(
                 label="⬇️ Download Agent Output",

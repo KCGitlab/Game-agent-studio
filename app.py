@@ -135,14 +135,16 @@ def generate_response(prompt):
             ],
             max_completion_tokens=1200
         )
-        # ✅ Correct GPT-5 content extraction
-        content = response.choices[0].message["content"]
+
+        # ✅ Correct access for GPT-5
+        content = response.choices[0].message.content
         if content:
             return content
         return "⚠️ Model returned no visible text output."
 
     except Exception as e:
         return f"❌ OpenAI API error: {e}"
+
 
 # ------------------ SAVE OUTPUT ------------------
 def save_output(feature, content, language):

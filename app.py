@@ -160,8 +160,8 @@ def generate_response(prompt):
                 {"role": "system", "content": "You are a professional game development AI agent."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_completion_tokens=700
+            #temperature=0.7,
+            max_completion_tokens=800
         )
         return response.choices[0].message.content
 
